@@ -1,5 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D 
 
 data = np.loadtxt(open("girls_train.csv","rb"),delimiter=",")
 test_data = np.loadtxt(open("girls_test.csv", "rb"),delimiter=",")
@@ -24,15 +25,15 @@ def computeErrorSF(betas, data):
     return error / float(data.shape[0])
 
 # Step function to update betas (single feature)
-def stepSF(betas, data, learningRate, X):
+def stepSF(betas, data, learningRate, X, y):
     new_betas = [0,0]
     n = float(data.shape[0])
     b0_grad = 0 
     b1_grad = 0
     for i in range(0, int(n)):
         # Calculate Gradients
-        b0_grad += 1/n * (betas[0] + betas[1] * X[i][1] - data.T[1][i]) * X[i][0]
-        b1_grad += 1/n * (betas[0] + betas[1] * X[i][1] - data.T[1][i]) * X[i][1]
+        b0_grad += 1/n * (betas[0] + betas[1] * X[i][1] - y[i]) * X[i][0]
+        b1_grad += 1/n * (betas[0] + betas[1] * X[i][1] - y[i]) * X[i][1]
     new_betas[0] = betas[0] - learningRate * b0_grad
     new_betas[1] = betas[1] - learningRate * b1_grad
     return new_betas
@@ -46,11 +47,11 @@ def runSFGD(data, learningRate, iterations):
 
     # Iterate algorithm (learningRate) times
     for i in range(0, iterations):
-        betas = step(betas, data, learningRate, X)
+        betas = stepSF(betas, data, learningRate, X, y)
 
     return betas
 
-results = runGD(data, 0.05, 1500)
+results = runSFGD(data, 0.05, 1500)
 
 # Resulting Betas
 print "[beta0, beta1]"
@@ -58,7 +59,7 @@ print results
 
 # Compute error for training data
 print "Error of training data"
-print computeError(results, data)
+print computeErrorSF(results, data)
 
 # Part 1.3
 # Setup Plotting Regression Line
@@ -73,7 +74,7 @@ plt.plot(result_x, result_y)
 
 # Compute error for test data
 print "Error of test data"
-print computeError(results, test_data)
+print computeErrorSF(results, test_data)
 
 # Part 2.1
 # Prep data
@@ -102,26 +103,68 @@ def scaleVector(vector, mean, std):
     return vector
 
 scaled_age = scaleVector(new_data.T[0], mean_age, std_age)
-print scaled_age
+#print scaled_age
 
 scaled_weight = scaleVector(new_data.T[1], mean_weight, std_weight)
-print scaled_weight
+#print scaled_weight
 
 scaled_height = scaleVector(new_data.T[2], mean_height, std_height)
-print scaled_height
-
-# Mean-square Error (multi-feature)
-def computeErrorSF(betas, data):
-    error = 0
-    for i in range(0, data.shape[0]):
-        error += (data[i][1] - (betas[1] * data[i][0] + betas[0])) ** 2
-    return error / float(data.shape[0])
+#print scaled_height
 
 # Step function to update betas (multi-feature)
-def stepMF(data, learningRate, iterations, X, y):
-    pass
+def stepMF(betas, data, learningRate, X, y):
+    new_betas = [0,0, 0]
+    n = float(data.shape[0])
+    b0_grad = 0 
+    b1_grad = 0
+    b2_grad = 0
+    for i in range(0, int(n)):
+        # Calculate Gradients
+        b0_grad += 1/n * (betas[0] + betas[1] * X[i][1] + betas[2] * X[i][2] - y[i]) * X[i][0]
+        b1_grad += 1/n * (betas[0] + betas[1] * X[i][1] + betas[2] * X[i][2] - y[i]) * X[i][1]
+        b2_grad += 1/n * (betas[0] + betas[1] * X[i][1] + betas[2] * X[i][2] - y[i]) * X[i][2] 
+    new_betas[0] = betas[0] - learningRate * b0_grad
+    new_betas[1] = betas[1] - learningRate * b1_grad
+    new_betas[2] = betas[2] - learningRate * b2_grad
+    return new_betas
 
 # Run Gradient Decent (multi-feature)
 def runMFGD(data, learningRate, iterations):
-    pass
+    # Setup parameters
+    y = data.T[2]
+    X = np.column_stack((np.ones(len(y)), data.T[0], data.T[1]))
+    betas = [0,0,0]
+
+    # Iterate algorithm (learningRate) times
+    for i in range(0, iterations):
+        betas = stepMF(betas, data, learningRate, X, y)
+
+    return betas
+
+alpha1 = runMFGD(new_data, 0.005, 50)
+alpha2 = runMFGD(new_data, 0.001, 50)
+alpha3 = runMFGD(new_data, 0.05, 50)
+alpha4 = runMFGD(new_data, 0.1, 50)
+alpha5 = runMFGD(new_data, 0.5, 50)
+alpha6 = runMFGD(new_data, 1, 50)
+
+print alpha1, "Learning Rate: 0.005, Iterations: 50"
+print alpha2, "Learning Rate: 0.001, Iterations: 50"
+print alpha3, "Learning Rate: 0.05, Iterations: 50"
+print alpha4, "Learning Rate: 0.1, Iterations: 50"
+print alpha5, "Learning Rate: 0.5, Iterations: 50"
+print alpha6, "Learning Rate: 1, Iterations: 50"
+
+# Plot Results
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.scatter(scaled_age, scaled_weight, scaled_height)
+
+ax.set_xlabel('Age')
+ax.set_ylabel('Weight')
+ax.set_zlabel('Height')
+
+plt.show()
+
 
